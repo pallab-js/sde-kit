@@ -1,14 +1,51 @@
+# Dependencies
 node_modules/
-.svelte-kit/
+
+# Build output
 build/
 dist/
 target/
-*.db
-*.log
-.DS_Store
-.env
 *.dmg
 *.deb
 *.AppImage
+
+# Framework
+.svelte-kit/
+.svelte-kit/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database
+*.db
+*.db-journal
+*.sqlite
+
+# Tauri
 apps/desktop/src-tauri/gen/schemas/
 apps/desktop/src-tauri/target/
+
+# Rust
+**/*.rs.bk
+
+# Package lock (root only)
+apps/desktop/package-lock.json
