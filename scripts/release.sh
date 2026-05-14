@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "==> Validating build constraints..."
+bash scripts/validate.sh
+
 echo "==> Installing frontend dependencies..."
 npm ci
 

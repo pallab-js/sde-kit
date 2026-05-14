@@ -29,6 +29,8 @@ jobs:
       - run: cargo check
         working-directory: apps/desktop/src-tauri
       - run: cargo test -p sde-kit-graph
+      - name: Validate build constraints
+        run: bash scripts/validate.sh
 
   build:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
