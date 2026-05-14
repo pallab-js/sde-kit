@@ -46,8 +46,6 @@
 </script>
 
 <div class="dashboard">
-  <h2 class="typo-display-md">Dashboard</h2>
-
   {#if loading}
     <div class="loading typo-body">Loading...</div>
   {:else}

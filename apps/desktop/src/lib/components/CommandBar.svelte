@@ -34,8 +34,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		height: 32px;
-		padding: 0 var(--spacing-2);
+		height: 36px;
+		padding: 0 var(--spacing-3);
 		background: var(--color-surface-dark-elevated);
 		border-bottom: 1px solid var(--color-surface-dark-border);
 		-webkit-app-region: drag;
@@ -60,7 +60,7 @@
 		display: flex;
 		align-items: center;
 		gap: var(--spacing-2);
-		padding: 2px 12px;
+		padding: 4px 12px;
 		border: 1px solid var(--color-surface-dark-border);
 		background: var(--color-surface-dark);
 		color: var(--color-on-dark-soft);
@@ -91,7 +91,7 @@
 	}
 
 	.bar-btn {
-		padding: 2px 8px;
+		padding: 4px 10px;
 		border: none;
 		background: none;
 		color: var(--color-on-dark-soft);
@@ -106,6 +106,7 @@
 
 	.brand {
 		font-family: var(--font-display);
+		font-size: 16px;
 		color: var(--color-on-dark);
 		margin-left: var(--spacing-1);
 		letter-spacing: -0.3px;

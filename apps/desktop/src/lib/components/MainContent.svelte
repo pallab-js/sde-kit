@@ -136,7 +136,7 @@
 	.tab-bar {
 		display: flex;
 		align-items: center;
-		height: 32px;
+		height: 34px;
 		background: var(--color-surface-dark-soft);
 		border-bottom: 1px solid var(--color-surface-dark-border);
 		overflow-x: auto;
@@ -149,7 +149,7 @@
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		padding: 4px 10px;
+		padding: 5px 12px;
 		border: none;
 		background: var(--color-surface-dark-soft);
 		color: var(--color-on-dark-soft);

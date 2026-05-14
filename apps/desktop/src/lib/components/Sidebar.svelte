@@ -124,7 +124,7 @@
 		display: flex;
 		align-items: center;
 		padding: 0 var(--spacing-3);
-		height: 35px;
+		height: 36px;
 		border-bottom: 1px solid var(--color-surface-dark-border);
 		flex-shrink: 0;
 	}

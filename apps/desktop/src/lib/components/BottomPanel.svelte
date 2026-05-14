@@ -68,10 +68,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 0 var(--spacing-2);
+		padding: 0 var(--spacing-3);
 		background: var(--color-surface-dark-soft);
 		border-bottom: 1px solid var(--color-surface-dark-border);
-		height: 28px;
+		height: 30px;
 	}
 
 	.header-tabs {
@@ -81,7 +81,7 @@
 	}
 
 	.header-tab {
-		padding: 0 12px;
+		padding: 0 14px;
 		border: none;
 		background: none;
 		color: var(--color-muted);
