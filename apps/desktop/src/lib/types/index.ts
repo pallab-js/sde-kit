@@ -20,6 +20,7 @@ export interface Task {
 	createdAt: string;
 	updatedAt: string;
 	projectId?: string;
+	milestoneId?: string;
 }
 
 export interface Milestone {

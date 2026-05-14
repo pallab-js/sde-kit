@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { openTab, closeTab, toggleSidebar, toggleBottom, activePanel, activeTabId, openTabs } from '$lib/stores/workspace';
 	import { splitMode } from '$lib/stores/editor';
+	import { get } from 'svelte/store';
 	import type { Tab, PanelId } from '$lib/types';
 
 	let { onCommandPalette }: { onCommandPalette: () => void } = $props();
@@ -65,6 +66,20 @@
 		if (meta && e.key === "'") {
 			e.preventDefault();
 			splitMode.update((v) => !v);
+			return;
+		}
+
+		if (meta && e.key === 'Tab') {
+			e.preventDefault();
+			const tabs = get(openTabs);
+			const current = get(activeTabId);
+			const idx = tabs.findIndex(t => t.id === current);
+			if (tabs.length > 1) {
+				const next = e.shiftKey
+					? tabs[(idx - 1 + tabs.length) % tabs.length]
+					: tabs[(idx + 1) % tabs.length];
+				activeTabId.set(next.id);
+			}
 			return;
 		}
 

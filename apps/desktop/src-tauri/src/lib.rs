@@ -1,6 +1,7 @@
 mod commands;
 mod models;
 mod persistence;
+mod watcher;
 
 use commands::fs::WorkspaceRoot;
 use commands::graph::GraphState;
@@ -13,6 +14,7 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -27,6 +29,18 @@ pub fn run() {
             app.manage(db);
             app.manage(GraphState(Mutex::new(Graph::new())));
             app.manage(WorkspaceRoot(Mutex::new(None)));
+
+            // Restore persisted graph
+            {
+                let db = app.state::<Database>();
+                let conn = db.conn.lock().expect("db lock");
+                if let Ok(snap) = crate::persistence::load_graph(&conn) {
+                    let graph_state = app.state::<GraphState>();
+                    let mut g = graph_state.0.lock().expect("graph lock");
+                    for node in snap.nodes { g.add_node(node); }
+                    for edge in snap.edges { g.add_edge(edge); }
+                }
+            }
 
             Ok(())
         })
@@ -62,6 +76,11 @@ pub fn run() {
             commands::graph::get_graph_snapshot,
             commands::graph::clear_graph,
             commands::graph::compute_graph_layout,
+            commands::graph::sync_graph_from_sdlc,
+            commands::assign_task_to_milestone,
+            commands::fs::search_in_files,
+            commands::get_note,
+            commands::save_note,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

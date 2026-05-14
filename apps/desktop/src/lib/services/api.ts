@@ -18,7 +18,7 @@ export function deleteProject(id: string): Promise<void> { return invoke('delete
 // Tasks
 export function getTasks(): Promise<Task[]> { return invoke('get_tasks'); }
 export function getTasksByProject(projectId: string): Promise<Task[]> { return invoke('get_tasks_by_project', { projectId }); }
-export function createTask(title: string, description?: string, priority?: string, projectId?: string): Promise<Task> { return invoke('create_task', { title, description, priority, projectId }); }
+export function createTask(title: string, description?: string, priority?: string, projectId?: string, milestoneId?: string): Promise<Task> { return invoke('create_task', { title, description, priority, projectId, milestoneId }); }
 export function updateTask(id: string, title?: string, description?: string, priority?: string): Promise<void> { return invoke('update_task', { id, title, description, priority }); }
 export function updateTaskStatus(id: string, status: string): Promise<void> { return invoke('update_task_status', { id, status }); }
 export function deleteTask(id: string): Promise<void> { return invoke('delete_task', { id }); }
@@ -28,3 +28,6 @@ export function getMilestones(): Promise<Milestone[]> { return invoke('get_miles
 export function createMilestone(title: string, description?: string, dueDate?: string, projectId?: string): Promise<Milestone> { return invoke('create_milestone', { title, description, dueDate, projectId }); }
 export function updateMilestoneStatus(id: string, status: string): Promise<void> { return invoke('update_milestone_status', { id, status }); }
 export function deleteMilestone(id: string): Promise<void> { return invoke('delete_milestone', { id }); }
+export function assignTaskToMilestone(taskId: string, milestoneId: string | null): Promise<void> {
+    return invoke('assign_task_to_milestone', { taskId, milestoneId });
+}

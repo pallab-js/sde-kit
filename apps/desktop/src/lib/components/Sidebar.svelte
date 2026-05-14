@@ -7,6 +7,8 @@
 	import ProjectsPanel from './ProjectsPanel.svelte';
 	import MilestonesPanel from './MilestonesPanel.svelte';
 	import GraphPanel from './GraphPanel.svelte';
+	import SearchPanel from './SearchPanel.svelte';
+	import NotesPanel from './NotesPanel.svelte';
 
 	const PANEL_LABELS: Record<PanelId, string> = {
 		explorer: 'Explorer',
@@ -82,9 +84,9 @@
 		{:else if $activePanel === 'graphs'}
 			<GraphPanel />
 		{:else if $activePanel === 'search'}
-			<div class="panel-section">
-				<div class="search-box"><input type="text" class="search-input typo-caption" placeholder="Search files..." /></div>
-			</div>
+			<SearchPanel />
+		{:else if $activePanel === 'notes'}
+			<NotesPanel />
 		{:else}
 			<div class="placeholder-panel">
 				<svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={ICONS[$activePanel ?? 'explorer']} /></svg>
@@ -125,22 +127,6 @@
 		flex: 1;
 		overflow-y: auto;
 	}
-
-	.panel-section {
-		padding: 0;
-	}
-
-	.search-box { padding: var(--spacing-2); }
-	.search-input {
-		width: 100%;
-		padding: 4px var(--spacing-2);
-		border: 1px solid var(--color-surface-dark-border);
-		background: var(--color-surface-dark);
-		color: var(--color-on-dark);
-		border-radius: var(--radius-xs);
-		outline: none;
-	}
-	.search-input:focus { border-color: var(--color-primary); }
 
 	.placeholder-panel {
 		display: flex;

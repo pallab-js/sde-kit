@@ -8,7 +8,7 @@ use rusqlite::params;
 use tauri::State;
 use uuid::Uuid;
 
-fn parse_status(s: &str) -> TaskStatus {
+pub fn parse_status(s: &str) -> TaskStatus {
     match s {
         "doing" => TaskStatus::Doing,
         "done" => TaskStatus::Done,
@@ -16,7 +16,7 @@ fn parse_status(s: &str) -> TaskStatus {
     }
 }
 
-fn parse_priority(s: &str) -> TaskPriority {
+pub fn parse_priority(s: &str) -> TaskPriority {
     match s {
         "low" => TaskPriority::Low,
         "high" => TaskPriority::High,
@@ -24,7 +24,7 @@ fn parse_priority(s: &str) -> TaskPriority {
     }
 }
 
-fn parse_milestone_status(s: &str) -> MilestoneStatus {
+pub fn parse_milestone_status(s: &str) -> MilestoneStatus {
     match s {
         "closed" => MilestoneStatus::Closed,
         _ => MilestoneStatus::Open,
@@ -69,12 +69,24 @@ pub fn create_project(name: String, path: String, description: Option<String>, d
 }
 
 #[tauri::command]
-pub fn update_project(id: String, name: Option<String>, path: Option<String>, description: Option<String>, db: State<Database>) -> Result<(), String> {
+pub fn update_project(
+    id: String,
+    name: Option<String>,
+    path: Option<String>,
+    description: Option<String>,
+    db: State<Database>,
+) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let now = Utc::now().to_rfc3339();
-    if let Some(n) = name { conn.execute("UPDATE projects SET name = ?1, updated_at = ?2 WHERE id = ?3", params![n, now, id]).map_err(|e| e.to_string())?; }
-    if let Some(p) = path { conn.execute("UPDATE projects SET path = ?1, updated_at = ?2 WHERE id = ?3", params![p, now, id]).map_err(|e| e.to_string())?; }
-    if description.is_some() { conn.execute("UPDATE projects SET description = ?1, updated_at = ?2 WHERE id = ?3", params![description, now, id]).map_err(|e| e.to_string())?; }
+    conn.execute(
+        "UPDATE projects SET
+            name        = COALESCE(?1, name),
+            path        = COALESCE(?2, path),
+            description = COALESCE(?3, description),
+            updated_at  = ?4
+         WHERE id = ?5",
+        params![name, path, description, now, id],
+    ).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -93,7 +105,7 @@ pub fn delete_project(id: String, db: State<Database>) -> Result<(), String> {
 pub fn get_tasks(db: State<Database>) -> Result<Vec<Task>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, title, description, status, priority, created_at, updated_at, project_id FROM tasks ORDER BY created_at DESC")
+        .prepare("SELECT id, title, description, status, priority, created_at, updated_at, project_id, milestone_id FROM tasks ORDER BY created_at DESC")
         .map_err(|e| e.to_string())?;
 
     let tasks = stmt
@@ -104,6 +116,7 @@ pub fn get_tasks(db: State<Database>) -> Result<Vec<Task>, String> {
                 id: row.get(0)?, title: row.get(1)?, description: row.get(2)?,
                 status: parse_status(&s), priority: parse_priority(&p),
                 created_at: row.get(5)?, updated_at: row.get(6)?, project_id: row.get(7)?,
+                milestone_id: row.get(8)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -116,7 +129,7 @@ pub fn get_tasks(db: State<Database>) -> Result<Vec<Task>, String> {
 pub fn get_tasks_by_project(project_id: String, db: State<Database>) -> Result<Vec<Task>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, title, description, status, priority, created_at, updated_at, project_id FROM tasks WHERE project_id = ?1 ORDER BY created_at DESC")
+        .prepare("SELECT id, title, description, status, priority, created_at, updated_at, project_id, milestone_id FROM tasks WHERE project_id = ?1 ORDER BY created_at DESC")
         .map_err(|e| e.to_string())?;
 
     let tasks = stmt
@@ -127,6 +140,7 @@ pub fn get_tasks_by_project(project_id: String, db: State<Database>) -> Result<V
                 id: row.get(0)?, title: row.get(1)?, description: row.get(2)?,
                 status: parse_status(&s), priority: parse_priority(&p),
                 created_at: row.get(5)?, updated_at: row.get(6)?, project_id: row.get(7)?,
+                milestone_id: row.get(8)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -136,25 +150,41 @@ pub fn get_tasks_by_project(project_id: String, db: State<Database>) -> Result<V
 }
 
 #[tauri::command]
-pub fn create_task(title: String, description: Option<String>, priority: Option<String>, project_id: Option<String>, db: State<Database>) -> Result<Task, String> {
+pub fn create_task(
+    title: String, description: Option<String>, priority: Option<String>,
+    project_id: Option<String>, milestone_id: Option<String>,
+    db: State<Database>,
+) -> Result<Task, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
     let p = priority.unwrap_or_else(|| "medium".to_string());
     conn.execute(
-        "INSERT INTO tasks (id, title, description, status, priority, created_at, updated_at, project_id) VALUES (?1, ?2, ?3, 'todo', ?4, ?5, ?6, ?7)",
-        params![id, title, description, p, now, now, project_id],
+        "INSERT INTO tasks (id, title, description, status, priority, created_at, updated_at, project_id, milestone_id) VALUES (?1, ?2, ?3, 'todo', ?4, ?5, ?6, ?7, ?8)",
+        params![id, title, description, p, now, now, project_id, milestone_id],
     ).map_err(|e| e.to_string())?;
-    Ok(Task { id, title, description, status: TaskStatus::Todo, priority: parse_priority(&p), created_at: now.clone(), updated_at: now, project_id })
+    Ok(Task { id, title, description, status: TaskStatus::Todo, priority: parse_priority(&p), created_at: now.clone(), updated_at: now, project_id, milestone_id })
 }
 
 #[tauri::command]
-pub fn update_task(id: String, title: Option<String>, description: Option<String>, priority: Option<String>, db: State<Database>) -> Result<(), String> {
+pub fn update_task(
+    id: String,
+    title: Option<String>,
+    description: Option<String>,
+    priority: Option<String>,
+    db: State<Database>,
+) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let now = Utc::now().to_rfc3339();
-    if let Some(t) = title { conn.execute("UPDATE tasks SET title = ?1, updated_at = ?2 WHERE id = ?3", params![t, now, id]).map_err(|e| e.to_string())?; }
-    if let Some(d) = description { conn.execute("UPDATE tasks SET description = ?1, updated_at = ?2 WHERE id = ?3", params![d, now, id]).map_err(|e| e.to_string())?; }
-    if let Some(p) = priority { conn.execute("UPDATE tasks SET priority = ?1, updated_at = ?2 WHERE id = ?3", params![p, now, id]).map_err(|e| e.to_string())?; }
+    conn.execute(
+        "UPDATE tasks SET
+            title       = COALESCE(?1, title),
+            description = COALESCE(?2, description),
+            priority    = COALESCE(?3, priority),
+            updated_at  = ?4
+         WHERE id = ?5",
+        params![title, description, priority, now, id],
+    ).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -222,6 +252,31 @@ pub fn delete_milestone(id: String, db: State<Database>) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     conn.execute("DELETE FROM milestones WHERE id = ?1", params![id]).map_err(|e| e.to_string())?;
     Ok(())
+}
+
+// --- Task ↔ Milestone ---
+
+#[tauri::command]
+pub fn assign_task_to_milestone(task_id: String, milestone_id: Option<String>, db: State<Database>) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let now = Utc::now().to_rfc3339();
+    conn.execute(
+        "UPDATE tasks SET milestone_id = ?1, updated_at = ?2 WHERE id = ?3",
+        params![milestone_id, now, task_id],
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// --- Notes ---
+
+#[tauri::command]
+pub fn get_note(note_id: String, db: State<Database>) -> Result<Option<String>, String> {
+    get_workspace_state(format!("note:{note_id}"), db)
+}
+
+#[tauri::command]
+pub fn save_note(note_id: String, content: String, db: State<Database>) -> Result<(), String> {
+    set_workspace_state(format!("note:{note_id}"), content, db)
 }
 
 // --- Workspace State ---

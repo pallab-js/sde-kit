@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getTasks, createTask, updateTaskStatus, deleteTask } from '$lib/services/api';
-	import type { Task, TaskStatus } from '$lib/types';
+	import { getTasks, getMilestones, createTask, updateTaskStatus, deleteTask } from '$lib/services/api';
+	import type { Task, TaskStatus, Milestone } from '$lib/types';
 
 	let tasks = $state<Task[]>([]);
+	let milestones = $state<Milestone[]>([]);
+	let selectedMilestoneId = $state<string | null>(null);
 	let loading = $state(true);
 	let view = $state<'list' | 'kanban'>('kanban');
 	let newTitle = $state('');
@@ -16,7 +18,7 @@
 		{ id: 'done', label: 'Done' },
 	];
 
-	onMount(() => load());
+	onMount(() => { load(); loadMilestones(); });
 
 	async function load() {
 		loading = true;
@@ -24,8 +26,17 @@
 		loading = false;
 	}
 
+	async function loadMilestones() {
+		try { milestones = await getMilestones(); } catch { milestones = []; }
+	}
+
+	function filteredTasks() {
+		if (!selectedMilestoneId) return tasks;
+		return tasks.filter((t) => t.milestoneId === selectedMilestoneId);
+	}
+
 	function getByStatus(status: TaskStatus) {
-		return tasks.filter((t) => t.status === status);
+		return filteredTasks().filter((t) => t.status === status);
 	}
 
 	async function add() {
@@ -68,6 +79,12 @@
 			<button class="view-btn typo-caption" class:active={view === 'list'} onclick={() => (view = 'list')}>☰</button>
 			<button class="view-btn typo-caption" class:active={view === 'kanban'} onclick={() => (view = 'kanban')}>⊞</button>
 		</div>
+		<select class="milestone-filter typo-caption" bind:value={selectedMilestoneId}>
+			<option value={null}>All Milestones</option>
+			{#each milestones as m (m.id)}
+				<option value={m.id}>{m.title}</option>
+			{/each}
+		</select>
 	</div>
 
 	<div class="new-task">
@@ -85,7 +102,7 @@
 				<div class="empty typo-body">Loading...</div>
 	{:else if view === 'list'}
 		<div class="task-list" role="list">
-			{#each tasks as task (task.id)}
+			{#each filteredTasks() as task (task.id)}
 			<div class="task-row typo-caption" draggable="true" role="listitem" aria-grabbed="false"
 				ondragstart={(e) => onDragStart(e, task.id)}
 				style="border-left: 3px solid {priorityColors[task.priority]}">
@@ -133,7 +150,12 @@
 	.tasks-panel { display: flex; flex-direction: column; height: 100%; }
 	.panel-header {
 		display: flex; align-items: center; justify-content: space-between;
-		padding: 6px var(--spacing-3); border-bottom: 1px solid var(--color-surface-dark-border);
+		padding: 6px var(--spacing-3); border-bottom: 1px solid var(--color-surface-dark-border); gap: var(--spacing-2);
+	}
+	.milestone-filter {
+		max-width: 160px; padding: 2px 4px; border: 1px solid var(--color-surface-dark-border);
+		background: var(--color-surface-dark-soft); color: var(--color-on-dark-soft);
+		border-radius: var(--radius-xs);
 	}
 	.header-actions { display: flex; gap: 2px; }
 	.view-btn {

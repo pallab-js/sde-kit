@@ -21,6 +21,7 @@ pub struct Task {
     pub created_at: String,
     pub updated_at: String,
     pub project_id: Option<String>,
+    pub milestone_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

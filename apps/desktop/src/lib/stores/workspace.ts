@@ -1,4 +1,5 @@
 import { writable, get } from 'svelte/store';
+import { evictFileContent } from './editor';
 import type { Tab, PanelId } from '$lib/types';
 
 export const activePanel = writable<PanelId | null>('explorer');
@@ -20,6 +21,8 @@ export function openTab(tab: Tab) {
 
 export function closeTab(id: string) {
 	openTabs.update((tabs) => {
+		const tab = tabs.find(t => t.id === id);
+		if (tab?.filePath) evictFileContent(tab.filePath);
 		const idx = tabs.findIndex((t) => t.id === id);
 		const updated = tabs.filter((t) => t.id !== id);
 		const current = get(activeTabId);

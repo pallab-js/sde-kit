@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { openTabs, activeTabId, closeTab, openTab } from '$lib/stores/workspace';
-	import { splitMode, splitRatio } from '$lib/stores/editor';
+	import { splitMode, splitRatio, dirtyPaths } from '$lib/stores/editor';
 	import CodeEditor from './CodeEditor.svelte';
 	import type { Tab } from '$lib/types';
 
@@ -45,6 +45,7 @@
 				>
 					<span class="tab-icon">{tab.icon ?? '📄'}</span>
 					<span class="tab-title">{tab.title}</span>
+					{#if tab.filePath && $dirtyPaths.has(tab.filePath)}<span class="tab-dirty">●</span>{/if}
 					{#if tab.closable}
 						<span
 							class="tab-close"
@@ -175,6 +176,7 @@
 	}
 
 	.tab-close:hover { background: var(--color-surface-dark-elevated); color: var(--color-on-dark); }
+	.tab-dirty { color: var(--color-warning); font-size: 12px; margin-left: -2px; }
 	.tab-spacer { flex: 1; }
 
 	.split-btn {

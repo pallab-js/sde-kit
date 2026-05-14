@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { openTab, togglePanel, toggleSidebar, toggleBottom } from '$lib/stores/workspace';
+	import { commands } from '$lib/stores/commands';
+	import { splitMode } from '$lib/stores/editor';
 	import type { Command, PanelId } from '$lib/types';
 
 	let { open = false, onClose }: { open: boolean; onClose: () => void } = $props();
@@ -9,22 +11,10 @@
 	let selectedIndex = $state(0);
 	let inputEl: HTMLInputElement | undefined = $state();
 
-	const commands: Command[] = [
-		{ id: 'palette', label: 'Command Palette', shortcut: 'Cmd+P', category: 'general', icon: '⌘', action: () => {} },
-		{ id: 'toggle-sidebar', label: 'Toggle Sidebar', shortcut: 'Cmd+B', category: 'view', icon: '⊞', action: () => { toggleSidebar(); onClose(); } },
-		{ id: 'toggle-console', label: 'Toggle Console', shortcut: 'Cmd+J', category: 'view', icon: '_', action: () => { toggleBottom(); onClose(); } },
-		{ id: 'explorer', label: 'Show Explorer', category: 'view', icon: '📁', action: () => { togglePanel('explorer' as PanelId); onClose(); } },
-		{ id: 'tasks', label: 'Show Tasks', category: 'view', icon: '✓', action: () => { togglePanel('tasks' as PanelId); onClose(); } },
-		{ id: 'milestones', label: 'Show Milestones', category: 'view', icon: '🏁', action: () => { togglePanel('milestones' as PanelId); onClose(); } },
-		{ id: 'projects', label: 'Show Projects', category: 'view', icon: '📦', action: () => { togglePanel('projects' as PanelId); onClose(); } },
-		{ id: 'search', label: 'Global Search', shortcut: 'Cmd+Shift+F', category: 'general', icon: '🔍', action: () => { togglePanel('search' as PanelId); onClose(); } },
-		{ id: 'new-tab', label: 'New Tab', shortcut: 'Cmd+T', category: 'general', icon: '+', action: () => { openTab({ id: `tab-${Date.now()}`, title: 'Untitled', closable: true }); onClose(); } },
-	];
-
 	let filtered = $derived(
 		query
-			? commands.filter((c) => c.label.toLowerCase().includes(query.toLowerCase()))
-			: commands.slice(0, 20)
+			? $commands.filter((c) => c.label.toLowerCase().includes(query.toLowerCase()))
+			: $commands.slice(0, 20)
 	);
 
 	$effect(() => {

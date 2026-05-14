@@ -7,6 +7,10 @@ npm ci
 echo "==> Building SvelteKit frontend..."
 npm run build -w apps/desktop
 
+echo "→ Rust lints"
+cargo clippy --manifest-path apps/desktop/src-tauri/Cargo.toml -- -D warnings
+cargo clippy -p sde-kit-graph -- -D warnings
+
 echo "==> Building Tauri application (dev mode)..."
 cd apps/desktop/src-tauri
 cargo build

@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
+	import { listen } from '@tauri-apps/api/event';
 	import { listDirectory } from '$lib/services/fs';
 	import { openTab } from '$lib/stores/workspace';
+	import { invoke } from '@tauri-apps/api/core';
 	import type { FileEntry } from '$lib/types';
 	import FileTree from './FileTree.svelte';
 
@@ -11,8 +13,51 @@
 	let loading = $state(true);
 	let expanded = $state(false);
 	let showCount = $state(50);
+	let unlisten: (() => void) | undefined;
+	let contextMenu = $state<{ x: number; y: number; entry: FileEntry; open: boolean }>({ x: 0, y: 0, entry: null as any, open: false });
 
-	onMount(() => load());
+	function openContextMenu(e: MouseEvent, entry: FileEntry) {
+		e.preventDefault();
+		contextMenu = { x: e.clientX, y: e.clientY, entry, open: true };
+	}
+
+	async function newFile() {
+		const name = prompt('New file name:');
+		if (!name) return;
+		const path = contextMenu.entry.is_dir
+			? contextMenu.entry.path + '/' + name
+			: contextMenu.entry.path.split('/').slice(0, -1).join('/') + '/' + name;
+		await invoke('write_file', { path, content: '' });
+		contextMenu.open = false;
+		load();
+	}
+
+	async function renameEntry() {
+		const newName = prompt('New name:', contextMenu.entry.name);
+		if (!newName || newName === contextMenu.entry.name) return;
+		const dir = contextMenu.entry.path.split('/').slice(0, -1).join('/');
+		await invoke('rename_file', { oldPath: contextMenu.entry.path, newPath: dir + '/' + newName });
+		contextMenu.open = false;
+		load();
+	}
+
+	async function deleteEntry() {
+		if (!confirm(`Delete "${contextMenu.entry.name}"?`)) return;
+		await invoke('delete_file', { path: contextMenu.entry.path });
+		contextMenu.open = false;
+		load();
+	}
+
+	onMount(async () => {
+		await load();
+		unlisten = await listen('fs-event', () => {
+			load();
+		});
+	});
+
+	onDestroy(() => {
+		unlisten?.();
+	});
 
 	async function load() {
 		loading = true;
@@ -41,7 +86,7 @@
 </script>
 
 <div class="folder-row" class:expanded>
-	<button class="folder-toggle typo-caption" onclick={toggle} aria-label={expanded ? 'Collapse' : 'Expand'}>
+	<button class="folder-toggle typo-caption" onclick={toggle} oncontextmenu={(e) => openContextMenu(e, { name: root.split('/').pop() || root, path: root, is_dir: true, size: 0, modified: '' })} aria-label={expanded ? 'Collapse' : 'Expand'}>
 		<span class="chevron">{expanded ? '▼' : '▶'}</span>
 		<span class="folder-icon">{expanded ? '📂' : '📁'}</span>
 		<span class="folder-name">{root.split('/').pop() || root}</span>
@@ -60,7 +105,7 @@
 			{/each}
 			{@const files = children.filter(c => !c.is_dir)}
 			{#each files.slice(0, showCount) as file (file.path)}
-				<button class="file-row typo-caption" onclick={() => openFile(file)}>
+				<button class="file-row typo-caption" onclick={() => openFile(file)} oncontextmenu={(e) => openContextMenu(e, file)}>
 					<span class="file-icon">📄</span>
 					<span class="file-name">{file.name}</span>
 				</button>
@@ -71,6 +116,16 @@
 				</button>
 			{/if}
 		{/if}
+	</div>
+{/if}
+
+{#if contextMenu.open}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="ctx-backdrop" onclick={() => (contextMenu.open = false)} onkeydown={() => {}}></div>
+	<div class="ctx-menu" style="left: {contextMenu.x}px; top: {contextMenu.y}px;">
+		<button onclick={newFile}>New File Here</button>
+		<button onclick={renameEntry}>Rename</button>
+		<button class="danger" onclick={deleteEntry}>Delete</button>
 	</div>
 {/if}
 
@@ -180,4 +235,14 @@
 		color: var(--color-on-dark);
 		background: var(--color-surface-dark);
 	}
+
+	.ctx-backdrop { position: fixed; inset: 0; z-index: 99; }
+	.ctx-menu {
+		position: fixed; z-index: 100; background: var(--color-surface-dark-elevated);
+		border: 1px solid var(--color-surface-dark-border); border-radius: var(--radius-md);
+		padding: 4px; min-width: 160px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+	}
+	.ctx-menu button { display: block; width: 100%; padding: 6px 12px; border: none; background: none; color: var(--color-on-dark); text-align: left; cursor: pointer; border-radius: var(--radius-xs); font-size: 13px; }
+	.ctx-menu button:hover { background: var(--color-surface-dark); }
+	.ctx-menu button.danger:hover { color: var(--color-error); }
 </style>

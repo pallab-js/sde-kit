@@ -7,6 +7,8 @@
 	import { oneDark } from '@codemirror/theme-one-dark';
 	import { readFile, writeFile } from '$lib/services/fs';
 	import { setFileContent, updateContent, markDirty } from '$lib/stores/editor';
+	import { writable } from 'svelte/store';
+	const saveStatus = writable<'saved' | 'saving' | 'error' | 'dirty'>('saved');
 
 	let { path: filePath }: { path: string } = $props();
 
@@ -16,21 +18,28 @@
 	let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
 	const langLoaders: Record<string, () => Promise<import('@codemirror/language').LanguageSupport>> = {
-		'.js': () => import('@codemirror/lang-javascript').then((m) => m.javascript()),
-		'.jsx': () => import('@codemirror/lang-javascript').then((m) => m.javascript({ jsx: true })),
-		'.ts': () => import('@codemirror/lang-javascript').then((m) => m.javascript({ typescript: true })),
-		'.tsx': () => import('@codemirror/lang-javascript').then((m) => m.javascript({ jsx: true, typescript: true })),
-		'.css': () => import('@codemirror/lang-css').then((m) => m.css()),
-		'.html': () => import('@codemirror/lang-html').then((m) => m.html()),
-		'.json': () => import('@codemirror/lang-json').then((m) => m.json()),
-		'.md': () => import('@codemirror/lang-markdown').then((m) => m.markdown()),
-		'.mdx': () => import('@codemirror/lang-markdown').then((m) => m.markdown()),
-		'.rs': () => import('@codemirror/lang-rust').then((m) => m.rust()),
-		'.py': () => import('@codemirror/lang-python').then((m) => m.python()),
-		'.svelte': () => import('@codemirror/lang-html').then((m) => m.html()),
-		'.yaml': () => import('@codemirror/lang-javascript').then((m) => m.javascript()),
-		'.yml': () => import('@codemirror/lang-javascript').then((m) => m.javascript()),
-		'.toml': () => import('@codemirror/lang-javascript').then((m) => m.javascript()),
+		'.js':     () => import('@codemirror/lang-javascript').then(m => m.javascript()),
+		'.jsx':    () => import('@codemirror/lang-javascript').then(m => m.javascript({ jsx: true })),
+		'.ts':     () => import('@codemirror/lang-javascript').then(m => m.javascript({ typescript: true })),
+		'.tsx':    () => import('@codemirror/lang-javascript').then(m => m.javascript({ jsx: true, typescript: true })),
+		'.css':    () => import('@codemirror/lang-css').then(m => m.css()),
+		'.html':   () => import('@codemirror/lang-html').then(m => m.html()),
+		'.svelte': () => import('@codemirror/lang-html').then(m => m.html()),
+		'.json':   () => import('@codemirror/lang-json').then(m => m.json()),
+		'.md':     () => import('@codemirror/lang-markdown').then(m => m.markdown()),
+		'.mdx':    () => import('@codemirror/lang-markdown').then(m => m.markdown()),
+		'.rs':     () => import('@codemirror/lang-rust').then(m => m.rust()),
+		'.py':     () => import('@codemirror/lang-python').then(m => m.python()),
+		'.yaml':   () => import('@codemirror/lang-yaml').then(m => m.yaml()),
+		'.yml':    () => import('@codemirror/lang-yaml').then(m => m.yaml()),
+		// .toml: unsupported by CodeMirror — falls back to plain text
+		'.xml':    () => import('@codemirror/lang-xml').then(m => m.xml()),
+		'.sql':    () => import('@codemirror/lang-sql').then(m => m.sql()),
+		'.java':   () => import('@codemirror/lang-java').then(m => m.java()),
+		'.cpp':    () => import('@codemirror/lang-cpp').then(m => m.cpp()),
+		'.c':      () => import('@codemirror/lang-cpp').then(m => m.cpp()),
+		'.go':     () => import('@codemirror/lang-go').then(m => m.go()),
+		'.php':    () => import('@codemirror/lang-php').then(m => m.php()),
 	};
 
 	async function loadLang(path: string) {
@@ -39,8 +48,7 @@
 		if (loader) {
 			try { return await loader(); } catch {}
 		}
-		const js = await import('@codemirror/lang-javascript');
-		return js.javascript();
+		return [] as any;
 	}
 
 	onMount(async () => {
@@ -74,6 +82,7 @@
 					history(),
 					EditorView.updateListener.of((update) => {
 						if (update.docChanged) {
+							saveStatus.set('dirty');
 							const newContent = update.state.doc.toString();
 							updateContent(filePath, newContent);
 							debounceSave(newContent);
@@ -97,14 +106,17 @@
 	}
 
 	async function save(content?: string) {
+		saveStatus.set('saving');
 		try {
 			const current = content ?? view?.state.doc.toString();
-			if (current) {
+			if (current !== undefined) {
 				await writeFile(filePath, current);
 				markDirty(filePath, false);
+				saveStatus.set('saved');
 			}
-		} catch {
-			// silently fail save
+		} catch (e) {
+			saveStatus.set('error');
+			console.error('Save failed:', e);
 		}
 	}
 
@@ -114,7 +126,12 @@
 	});
 </script>
 
-<div bind:this={container} class="editor-container"></div>
+<div class="editor-wrapper" style="position: relative; height: 100%;">
+	<div bind:this={container} class="editor-container"></div>
+	<div class="editor-status" class:error={$saveStatus === 'error'}>
+		{#if $saveStatus === 'saving'}⟳ Saving{:else if $saveStatus === 'error'}⚠ Save failed{:else if $saveStatus === 'dirty'}● Unsaved{:else}✓{/if}
+	</div>
+</div>
 
 <style>
 	.editor-container {
@@ -129,4 +146,11 @@
 	.editor-container :global(.cm-scroller) {
 		overflow: auto;
 	}
+
+	.editor-status {
+		position: absolute; bottom: 4px; right: 8px;
+		font-size: 11px; color: var(--color-muted);
+		pointer-events: none; font-family: var(--font-mono);
+	}
+	.editor-status.error { color: var(--color-error); }
 </style>

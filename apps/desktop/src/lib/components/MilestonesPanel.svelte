@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getMilestones, createMilestone, updateMilestoneStatus, deleteMilestone } from '$lib/services/api';
+	import { getMilestones, createMilestone, updateMilestoneStatus, deleteMilestone, getTasks } from '$lib/services/api';
 	import type { Milestone } from '$lib/types';
 
 	let milestones = $state<Milestone[]>([]);
@@ -37,6 +37,14 @@
 
 	async function remove(id: string) {
 		try { await deleteMilestone(id); load(); } catch {}
+	}
+
+	async function loadTaskProgress(milestoneId: string): Promise<{ done: number; total: number }> {
+		try {
+			const all = await getTasks();
+			const relevant = all.filter(t => t.milestoneId === milestoneId);
+			return { done: relevant.filter(t => t.status === 'done').length, total: relevant.length };
+		} catch { return { done: 0, total: 0 }; }
 	}
 </script>
 
@@ -88,6 +96,14 @@
 							{ms.status}
 						</span>
 					</div>
+					{#await loadTaskProgress(ms.id) then progress}
+						{#if progress.total > 0}
+							<div class="ms-progress">
+								<div class="ms-bar-track"><div class="ms-bar" style="width: {Math.round(progress.done / progress.total * 100)}%"></div></div>
+								<span class="ms-progress-label typo-small">{progress.done}/{progress.total} tasks</span>
+							</div>
+						{/if}
+					{/await}
 				</div>
 			{/each}
 		{/if}
@@ -154,4 +170,8 @@
 	.empty { display: flex; flex-direction: column; align-items: center; gap: var(--spacing-2); padding: var(--spacing-8); text-align: center; }
 	.empty-icon { font-size: 24px; opacity: 0.3; }
 	.empty-text { color: var(--color-muted); }
+	.ms-progress { margin: 4px 0 0 22px; display: flex; align-items: center; gap: 6px; }
+	.ms-bar-track { height: 4px; flex: 1; background: var(--color-surface-dark-border); border-radius: 2px; overflow: hidden; }
+	.ms-bar { height: 100%; background: var(--color-success); border-radius: 2px; transition: width 0.3s; }
+	.ms-progress-label { color: var(--color-muted); font-size: 11px; white-space: nowrap; }
 </style>

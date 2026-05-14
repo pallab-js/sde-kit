@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { getGraphSnapshot, computeGraphLayout, addGraphNode, removeGraphNode, addGraphEdge, removeGraphEdge, clearGraph } from '$lib/services/graph';
+	import { invoke } from '@tauri-apps/api/core';
 	import type { GraphNode, GraphEdge, NodePosition } from '$lib/services/graph';
 
 	let nodes = $state<GraphNode[]>([]);
@@ -52,10 +53,20 @@
 		loading = true;
 		try {
 			const snap = await getGraphSnapshot();
+			const prevPositions = new Map(positions);
 			nodes = snap.nodes;
 			edges = snap.edges;
-			const pos = await computeGraphLayout(canvas?.width || 600, canvas?.height || 400);
-			positions = new Map(pos.map((p: NodePosition) => [p.id, { x: p.x, y: p.y }]));
+
+			const unpositioned = nodes.filter(n => !prevPositions.has(n.id));
+			if (unpositioned.length > 0) {
+				const w = canvas?.width || 600;
+				const h = canvas?.height || 400;
+				const pos = await computeGraphLayout(w, h);
+				const newPos = new Map(pos.map((p: NodePosition) => [p.id, { x: p.x, y: p.y }]));
+				positions = new Map([...newPos, ...prevPositions]);
+			} else {
+				positions = prevPositions;
+			}
 		} catch {
 			nodes = [];
 			edges = [];
@@ -158,24 +169,43 @@
 		draw();
 	}
 
+	let tooltip = $state<{ x: number; y: number; node: GraphNode } | null>(null);
+
 	function onMouseMove(e: MouseEvent) {
-		if (dragNode) {
-			const rect = canvas.getBoundingClientRect();
-			const mx = e.clientX - rect.left;
-			const my = e.clientY - rect.top;
-			const world = toWorld(mx, my);
-			positions.set(dragNode, { x: world.x, y: world.y });
-			draw();
+		if (dragNode || isPanning) {
+			if (dragNode) {
+				const rect = canvas.getBoundingClientRect();
+				const mx = e.clientX - rect.left;
+				const my = e.clientY - rect.top;
+				const world = toWorld(mx, my);
+				positions.set(dragNode, { x: world.x, y: world.y });
+				draw();
+			}
+			if (isPanning) {
+				const rect = canvas.getBoundingClientRect();
+				const mx = e.clientX - rect.left;
+				const my = e.clientY - rect.top;
+				panX = mx - panStartX;
+				panY = my - panStartY;
+				draw();
+			}
+			tooltip = null;
 			return;
 		}
-		if (isPanning) {
-			const rect = canvas.getBoundingClientRect();
-			const mx = e.clientX - rect.left;
-			const my = e.clientY - rect.top;
-			panX = mx - panStartX;
-			panY = my - panStartY;
-			draw();
+		const rect = canvas.getBoundingClientRect();
+		const mx = e.clientX - rect.left;
+		const my = e.clientY - rect.top;
+		let hovered: typeof tooltip = null;
+		for (const node of nodes) {
+			const pos = positions.get(node.id);
+			if (!pos) continue;
+			const p = toScreen(pos.x, pos.y);
+			if ((mx - p.sx) ** 2 + (my - p.sy) ** 2 < (NODE_RADIUS * zoom + 5) ** 2) {
+				hovered = { x: e.clientX, y: e.clientY, node };
+				break;
+			}
 		}
+		tooltip = hovered;
 	}
 
 	function onMouseUp() {
@@ -238,6 +268,15 @@
 	});
 
 	const selectedNode = $derived(nodes.find((n) => n.id === selectedId));
+
+	async function syncFromSdlc() {
+		try {
+			await invoke('sync_graph_from_sdlc');
+			await load();
+		} catch (e) {
+			console.error('Sync failed:', e);
+		}
+	}
 </script>
 
 <div class="graph-panel">
@@ -247,6 +286,7 @@
 			<button class="tool-btn typo-caption" onclick={() => (showNewEdge = !showNewEdge)} title="Add Edge">+E</button>
 			<button class="tool-btn typo-caption" onclick={removeSelected} title="Delete Selected (click node)">−</button>
 			<button class="tool-btn typo-caption" onclick={refresh} title="Refresh Layout">⟳</button>
+			<button class="tool-btn typo-caption" onclick={syncFromSdlc} title="Sync from Projects/Tasks/Milestones">⟲SDLC</button>
 			<button class="tool-btn typo-caption" onclick={doClear} title="Clear All">✕</button>
 		</div>
 	</div>
@@ -271,15 +311,27 @@
 	{#if showNewEdge}
 		<div class="form-overlay">
 			<div class="form-row">
-				<input type="text" class="typo-caption" placeholder="Source node ID" bind:value={newEdgeSource} />
-				<input type="text" class="typo-caption" placeholder="Target node ID" bind:value={newEdgeTarget} />
+				<select class="typo-caption" bind:value={newEdgeSource}>
+					<option value="">— Source node —</option>
+					{#each nodes as n (n.id)}
+						<option value={n.id}>{n.label} ({n.node_type})</option>
+					{/each}
+				</select>
+				<select class="typo-caption" bind:value={newEdgeTarget}>
+					<option value="">— Target node —</option>
+					{#each nodes as n (n.id)}
+						<option value={n.id}>{n.label} ({n.node_type})</option>
+					{/each}
+				</select>
 				<select class="typo-caption" bind:value={newEdgeType}>
 					<option value="related">Related</option>
 					<option value="depends">Depends On</option>
 					<option value="contains">Contains</option>
+					<option value="blocks">Blocks</option>
+					<option value="implements">Implements</option>
 				</select>
 				<button class="btn-primary typo-caption" onclick={addEdge}>Add</button>
-				<button class="btn-secondary typo-caption" onclick={() => (showNewEdge = false)}>X</button>
+				<button class="btn-secondary typo-caption" onclick={() => (showNewEdge = false)}>✕</button>
 			</div>
 		</div>
 	{/if}
@@ -305,6 +357,13 @@
 			</div>
 		{/if}
 	</div>
+
+	{#if tooltip}
+		<div class="node-tooltip typo-small" style="left: {tooltip.x + 12}px; top: {tooltip.y - 8}px;">
+			<strong>{tooltip.node.label}</strong>
+			<span>{tooltip.node.node_type}</span>
+		</div>
+	{/if}
 
 	<div class="panel-footer typo-small">
 		<span class="stats typo-mono">{nodes.length} nodes, {edges.length} edges</span>
@@ -374,4 +433,12 @@
 	}
 	.stats { font-family: var(--font-mono); }
 	.hint { text-align: right; }
+	.node-tooltip {
+		position: fixed; z-index: 200;
+		background: var(--color-surface-dark-elevated);
+		border: 1px solid var(--color-surface-dark-border);
+		border-radius: var(--radius-sm); padding: 4px 8px;
+		color: var(--color-on-dark); pointer-events: none;
+		display: flex; flex-direction: column; gap: 2px;
+	}
 </style>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { bottomPanelOpen, toggleBottom } from '$lib/stores/workspace';
 	import { onMount } from 'svelte';
+	import TerminalPanel from './TerminalPanel.svelte';
 
 	let logs = $state([
 		{ level: 'info', message: 'SDE Kit initialized', time: new Date().toLocaleTimeString() },
@@ -8,7 +9,7 @@
 		{ level: 'info', message: 'Workspace ready', time: new Date().toLocaleTimeString() },
 	]);
 
-	let selectedTab = $state<'console' | 'problems' | 'output'>('console');
+		let selectedTab = $state<'console' | 'problems' | 'output' | 'terminal'>('console');
 
 	function addLog(level: string, message: string) {
 		logs = [...logs, { level, message, time: new Date().toLocaleTimeString() }];
@@ -28,6 +29,9 @@
 				<button class="header-tab typo-overline" class:active={selectedTab === 'output'} onclick={() => (selectedTab = 'output')}>
 					Output
 				</button>
+				<button class="header-tab typo-overline" class:active={selectedTab === 'terminal'} onclick={() => (selectedTab = 'terminal')}>
+					Terminal
+				</button>
 			</div>
 			<button class="close-btn typo-body" onclick={toggleBottom}>×</button>
 		</div>
@@ -41,6 +45,8 @@
 				{/each}
 			{:else if selectedTab === 'problems'}
 				<div class="empty-state typo-caption">No problems detected</div>
+			{:else if selectedTab === 'terminal'}
+				<TerminalPanel />
 			{:else}
 				<div class="empty-state typo-caption">No output</div>
 			{/if}

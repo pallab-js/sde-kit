@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Local-First SDLC Desktop Platform"
 authors = ["SDE Kit Contributors"]
 license = "MIT"
-repository = ""
+repository = "https://github.com/pallab-js/SDE-KIT"
 edition = "2021"
 rust-version = "1.77.2"
 
@@ -22,6 +22,7 @@ log = "0.4"
 tauri = { version = "2", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-shell = "2"
 rusqlite = { version = "0.32", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }

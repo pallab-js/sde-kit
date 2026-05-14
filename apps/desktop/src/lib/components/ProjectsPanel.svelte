@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { getProjects, createProject, deleteProject } from '$lib/services/api';
+	import { workspaceRoot } from '$lib/stores/workspace';
+	import { invoke } from '@tauri-apps/api/core';
 	import type { Project } from '$lib/types';
 
 	let projects = $state<Project[]>([]);
@@ -30,6 +32,15 @@
 
 	async function remove(id: string) {
 		try { await deleteProject(id); load(); } catch {}
+	}
+
+	async function openProject(project: Project) {
+		workspaceRoot.set(project.path);
+		try {
+			await invoke('set_workspace_root', { path: project.path });
+		} catch {}
+		const { togglePanel } = await import('$lib/stores/workspace');
+		togglePanel('explorer');
 	}
 </script>
 
@@ -64,6 +75,7 @@
 						<span class="project-name typo-caption">{project.name}</span>
 						<span class="project-path">{project.path}</span>
 					</div>
+					<button class="open-project-btn typo-small" onclick={() => openProject(project)} title="Open in Explorer">→</button>
 					<button class="delete-btn typo-body" onclick={() => remove(project.id)}>×</button>
 				</div>
 			{/each}
