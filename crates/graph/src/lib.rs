@@ -2,6 +2,7 @@ pub mod layout;
 pub mod types;
 
 pub use types::{Graph, GraphEdge, GraphNode, GraphSnapshot, NodePosition};
+pub use layout::ForceDirectedLayout;
 
 #[cfg(test)]
 mod tests {
@@ -135,6 +136,58 @@ mod tests {
     #[test]
     fn test_empty_layout() {
         let positions = layout::force_directed(&[], &[], 800.0, 600.0);
+        assert!(positions.is_empty());
+    }
+
+    #[test]
+    fn test_force_directed_layout_struct() {
+        let nodes = vec![
+            GraphNode::new("task", "A"),
+            GraphNode::new("task", "B"),
+            GraphNode::new("milestone", "C"),
+            GraphNode::new("task", "D"),
+        ];
+        let edges = vec![
+            GraphEdge::new(&nodes[0].id, &nodes[1].id, "depends"),
+            GraphEdge::new(&nodes[1].id, &nodes[2].id, "blocks"),
+            GraphEdge::new(&nodes[2].id, &nodes[3].id, "related"),
+        ];
+
+        let layout = layout::ForceDirectedLayout::new(42);
+        let positions = layout.simulate(&nodes, &edges, 100, 0.01);
+
+        assert_eq!(positions.len(), 4);
+        for pos in &positions {
+            assert!(pos.x >= -500.0 && pos.x <= 500.0);
+            assert!(pos.y >= -500.0 && pos.y <= 500.0);
+        }
+    }
+
+    #[test]
+    fn test_force_directed_layout_deterministic() {
+        let nodes = vec![
+            GraphNode::new("task", "X"),
+            GraphNode::new("task", "Y"),
+        ];
+        let edges = vec![
+            GraphEdge::new(&nodes[0].id, &nodes[1].id, "depends"),
+        ];
+
+        let layout = layout::ForceDirectedLayout::new(1234);
+        let pos_a = layout.simulate(&nodes, &edges, 50, 0.1);
+        let pos_b = layout.simulate(&nodes, &edges, 50, 0.1);
+
+        assert_eq!(pos_a.len(), pos_b.len());
+        for (a, b) in pos_a.iter().zip(pos_b.iter()) {
+            assert!((a.x - b.x).abs() < 1e-10);
+            assert!((a.y - b.y).abs() < 1e-10);
+        }
+    }
+
+    #[test]
+    fn test_force_directed_layout_empty() {
+        let layout = layout::ForceDirectedLayout::new(0);
+        let positions = layout.simulate(&[], &[], 100, 0.01);
         assert!(positions.is_empty());
     }
 
