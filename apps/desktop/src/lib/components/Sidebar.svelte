@@ -9,6 +9,9 @@
 	import GraphPanel from './GraphPanel.svelte';
 	import SearchPanel from './SearchPanel.svelte';
 	import NotesPanel from './NotesPanel.svelte';
+	import Dashboard from './Dashboard.svelte';
+	import PomodoroPanel from './PomodoroPanel.svelte';
+	import GitPanel from './GitPanel.svelte';
 
 	const PANEL_LABELS: Record<PanelId, string> = {
 		explorer: 'Explorer',
@@ -21,6 +24,8 @@
 		inspector: 'Inspector',
 		activity: 'Activity',
 		layouts: 'Layouts',
+		dashboard: 'Dashboard',
+		git: 'Git',
 	};
 
 	const ICONS: Record<string, string> = {
@@ -34,6 +39,8 @@
 		inspector: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
 		activity: 'M13 10V3L4 14h7v7l9-11h-7z',
 		layouts: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z',
+		dashboard: 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
+		git: 'M2.6 10.6a2 2 0 010-3.2l5-3.6a2 2 0 012.8.4l5.2 7a2 2 0 01-.4 2.8l-5 3.6a2 2 0 01-2.8-.4l-5.2-7z',
 	};
 
 	let width = $state(240);
@@ -87,6 +94,12 @@
 			<SearchPanel />
 		{:else if $activePanel === 'notes'}
 			<NotesPanel />
+		{:else if $activePanel === 'dashboard'}
+			<Dashboard />
+		{:else if $activePanel === 'activity'}
+			<PomodoroPanel />
+		{:else if $activePanel === 'git'}
+			<GitPanel />
 		{:else}
 			<div class="placeholder-panel">
 				<svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={ICONS[$activePanel ?? 'explorer']} /></svg>

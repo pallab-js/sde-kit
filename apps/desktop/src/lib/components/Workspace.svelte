@@ -11,6 +11,8 @@
 	import { splitMode } from '$lib/stores/editor';
 	import { registerCommand } from '$lib/stores/commands';
 	import { restoreLayout, subscribeAndPersist } from '$lib/stores/layout';
+	import { undoManager } from '$lib/services/undoManager';
+	import { theme } from '$lib/stores/theme';
 	import type { PanelId } from '$lib/types';
 
 	let paletteOpen = $state(false);
@@ -20,6 +22,11 @@
 		bottomPanelOpen.set(false);
 		restoreLayout();
 		subscribeAndPersist();
+
+		registerCommand({ id: 'undo', label: 'Undo', shortcut: 'Cmd+Z', category: 'general', icon: '↩', action: () => { undoManager.undo(); } });
+		registerCommand({ id: 'redo', label: 'Redo', shortcut: 'Cmd+Shift+Z', category: 'general', icon: '↪', action: () => { undoManager.redo(); } });
+		registerCommand({ id: 'toggle-theme', label: 'Toggle Theme', shortcut: 'Cmd+Shift+T', category: 'view', icon: '☀', action: () => { theme.toggle(); } });
+		registerCommand({ id: 'toggle-git', label: 'Show Git', category: 'view', icon: '⎇', action: () => { togglePanel('git' as PanelId); } });
 
 		registerCommand({ id: 'toggle-sidebar', label: 'Toggle Sidebar', shortcut: 'Cmd+B', category: 'view', icon: '⊞', action: () => { toggleSidebar(); } });
 		registerCommand({ id: 'toggle-console', label: 'Toggle Console', shortcut: 'Cmd+J', category: 'view', icon: '_', action: () => { toggleBottom(); } });

@@ -11,6 +11,8 @@
 		graphs: 'M13 3h7v7M10 21H3v-7M21 3l-7 7M3 21l7-7',
 		notes: 'M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z',
 		inspector: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+		dashboard: 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
+		git: 'M2.6 10.6a2 2 0 010-3.2l5-3.6a2 2 0 012.8.4l5.2 7a2 2 0 01-.4 2.8l-5 3.6a2 2 0 01-2.8-.4l-5.2-7z',
 	};
 
 	const items: { id: PanelId; label: string }[] = [
@@ -21,7 +23,9 @@
 		{ id: 'milestones', label: 'Milestones' },
 		{ id: 'graphs', label: 'Graphs' },
 		{ id: 'notes', label: 'Notes' },
-		{ id: 'inspector', label: 'Inspector' },
+		{ id: 'activity', label: 'Pomodoro' },
+		{ id: 'dashboard', label: 'Dashboard' },
+		{ id: 'git', label: 'Git' },
 	];
 </script>
 

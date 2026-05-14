@@ -34,7 +34,7 @@ export interface Milestone {
 	updatedAt: string;
 }
 
-export type PanelId = 'explorer' | 'projects' | 'tasks' | 'milestones' | 'graphs' | 'search' | 'activity' | 'layouts' | 'notes' | 'inspector';
+export type PanelId = 'explorer' | 'projects' | 'tasks' | 'milestones' | 'graphs' | 'search' | 'activity' | 'layouts' | 'notes' | 'inspector' | 'dashboard' | 'git';
 
 export interface Tab {
 	id: string;

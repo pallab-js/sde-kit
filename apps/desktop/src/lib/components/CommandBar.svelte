@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { toggleBottom, toggleSidebar } from '$lib/stores/workspace';
+	import { theme } from '$lib/stores/theme';
 
 	let { onPalette }: { onPalette: () => void } = $props();
 </script>
@@ -21,6 +22,9 @@
 	<div class="bar-right">
 		<button class="bar-btn typo-caption" title="Toggle Console (Cmd+J)" onclick={toggleBottom}>
 			Console
+		</button>
+		<button class="bar-btn typo-caption" title="Toggle Theme (Cmd+Shift+T)" onclick={() => theme.toggle()}>
+			☀
 		</button>
 	</div>
 </header>

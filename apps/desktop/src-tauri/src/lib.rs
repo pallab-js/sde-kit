@@ -10,8 +10,29 @@ use sde_kit_graph::types::Graph;
 use std::sync::Mutex;
 use tauri::Manager;
 
+fn setup_panic_hook() {
+    std::panic::set_hook(Box::new(|info| {
+        let msg = if let Some(s) = info.payload().downcast_ref::<&str>() {
+            s.to_string()
+        } else if let Some(s) = info.payload().downcast_ref::<String>() {
+            s.clone()
+        } else {
+            format!("{:?}", info)
+        };
+        let location = info.location().map(|l| l.to_string()).unwrap_or_else(|| "unknown".into());
+        log::error!("PANIC: {} at {}", msg, location);
+        let _ = std::fs::write(
+            std::env::temp_dir().join("sde-kit-crash.log"),
+            format!("SDE Kit Crash Report\nTime: {}\nMessage: {}\nLocation: {}\n",
+                chrono::Utc::now().to_rfc3339(), msg, location),
+        );
+    }));
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    setup_panic_hook();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
