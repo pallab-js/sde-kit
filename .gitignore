@@ -1,0 +1,14 @@
+node_modules/
+.svelte-kit/
+build/
+dist/
+target/
+*.db
+*.log
+.DS_Store
+.env
+*.dmg
+*.deb
+*.AppImage
+apps/desktop/src-tauri/gen/schemas/
+apps/desktop/src-tauri/target/
